@@ -1,13 +1,18 @@
-
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
 
+const { db } = require("./firebaseAdmin");
+const verifyToken = require("./middleware/authMiddleware");
+const allowRoles = require("./middleware/roleMiddleware");
+const lectureRoutes = require("./routes/lectureRoutes");
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use("/api/lectures", lectureRoutes);
 
 // Home route
 app.get("/", (req, res) => {
@@ -26,6 +31,59 @@ app.get("/api/health", (req, res) => {
     service: "lectra-backend",
   });
 });
+
+app.get("/api/protected", verifyToken, (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "You have accessed a protected route!",
+    user: {
+      uid: req.user.uid,
+      email: req.user.email,
+    },
+  });
+});
+
+// Student-only route
+app.get(
+  "/api/student",
+  verifyToken,
+  allowRoles("student"),
+  (req, res) => {
+    res.json({
+      success: true,
+      message: "Welcome, Student!",
+      role: req.user.role,
+    });
+  }
+);
+
+// Lecturer-only route
+app.get(
+  "/api/lecturer",
+  verifyToken,
+  allowRoles("lecturer"),
+  (req, res) => {
+    res.json({
+      success: true,
+      message: "Welcome, Lecturer!",
+      role: req.user.role,
+    });
+  }
+);
+
+// Admin-only route
+app.get(
+  "/api/admin",
+  verifyToken,
+  allowRoles("admin"),
+  (req, res) => {
+    res.json({
+      success: true,
+      message: "Welcome, Admin!",
+      role: req.user.role,
+    });
+  }
+);
 
 // Handle unknown routes
 app.use((req, res) => {
