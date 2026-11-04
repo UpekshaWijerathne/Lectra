@@ -17,3 +17,14 @@ export function canAccess(userRole, allowedRoles) {
   if (!allowedRoles || allowedRoles.length === 0) return true;
   return allowedRoles.includes(userRole);
 }
+
+export const ROLE_INFO = {
+  student: {
+    title: 'Student',
+    text: 'Join a lecture with a code, ask questions and upvote the ones you share.',
+  },
+  lecturer: {
+    title: 'Lecturer',
+    text: 'Create lectures, share a session code and see what your students ask.',
+  },
+};
