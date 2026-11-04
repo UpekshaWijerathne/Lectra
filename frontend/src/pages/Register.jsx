@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { friendlyAuthError } from '../lib/errors';
-import { SELF_ASSIGNABLE_ROLES, homePathForRole } from '../lib/roles';
+import { homePathForRole } from '../lib/roles';
+import RoleCards from '../components/RoleCards';
 
 export default function Register() {
   const { register } = useAuth();
@@ -44,13 +45,7 @@ export default function Register() {
         <label>Password
           <input type="password" value={form.password} onChange={set('password')} required minLength={6} />
         </label>
-        <label>I am a
-          <select value={form.role} onChange={set('role')}>
-            {SELF_ASSIGNABLE_ROLES.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-        </label>
+        <RoleCards value={form.role} onChange={(role) => setForm((f) => ({ ...f, role }))} disabled={busy} />
         {error && <p className="error" role="alert">{error}</p>}
         <button type="submit" disabled={busy}>Create account</button>
       </form>
