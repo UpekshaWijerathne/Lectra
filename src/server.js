@@ -8,6 +8,7 @@ const { db } = require("./firebaseAdmin");
 const verifyToken = require("./middleware/authMiddleware");
 const allowRoles = require("./middleware/roleMiddleware");
 const lectureRoutes = require("./routes/lectureRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 // Middleware
 app.use(cors());
@@ -70,6 +71,7 @@ app.get(
     });
   }
 );
+app.use("/api/users", userRoutes);
 
 // Admin-only route
 app.get(
