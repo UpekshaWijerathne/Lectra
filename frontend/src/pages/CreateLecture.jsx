@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
 import { createLecture } from '../lib/lectures';
 
 // Value for <input type="datetime-local"> in local time, one hour from now.
@@ -12,8 +11,7 @@ function defaultDateTime() {
 }
 
 export default function CreateLecture() {
-  const { user } = useAuth();
-  const [form, setForm] = useState({ subject: '', topic: '', description: '', scheduledAt: defaultDateTime() });
+  const [form, setForm] = useState({ subject: '', topic: '', scheduledAt: defaultDateTime() });
   const [created, setCreated] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -23,6 +21,12 @@ export default function CreateLecture() {
   async function onSubmit(e) {
     e.preventDefault();
     setError('');
+    const subject = form.subject.trim();
+    const topic = form.topic.trim();
+    if (!subject || !topic) {
+      setError('Subject and topic cannot be blank.');
+      return;
+    }
     const when = new Date(form.scheduledAt);
     if (Number.isNaN(when.getTime())) {
       setError('Choose a valid date and time.');
@@ -30,14 +34,8 @@ export default function CreateLecture() {
     }
     setBusy(true);
     try {
-      const result = await createLecture({
-        subject: form.subject.trim(),
-        topic: form.topic.trim(),
-        description: form.description.trim(),
-        scheduledAt: when,
-        lecturerId: user.uid,
-      });
-      setCreated(result);
+      // The backend creates the lecture and the session code (US-09 / US-10).
+      setCreated(await createLecture({ subject, topic, scheduledAt: when }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -50,7 +48,8 @@ export default function CreateLecture() {
       <main className="card narrow">
         <h1>Lecture created</h1>
         <p>Share this session code with your students:</p>
-        <p className="code big">{created.sessionCode}</p>
+        <p className="code big" aria-label={`Session code ${created.sessionCode}`}>{created.sessionCode}</p>
+        <p className="muted">Valid until {new Date(created.expiresAt).toLocaleString()}</p>
         <div className="row">
           <Link className="button" to="/lecturer">Back to my lectures</Link>
           <Link className="button secondary" to={`/lecture/${created.id}`}>Open lecture</Link>
@@ -69,15 +68,12 @@ export default function CreateLecture() {
         <label>Topic
           <input value={form.topic} onChange={set('topic')} required maxLength={150} />
         </label>
-        <label>Description (optional)
-          <textarea value={form.description} onChange={set('description')} rows={3} maxLength={500} />
-        </label>
         <label>Date and time
           <input type="datetime-local" value={form.scheduledAt} onChange={set('scheduledAt')} required />
         </label>
         {error && <p className="error" role="alert">{error}</p>}
         <div className="row">
-          <button type="submit" disabled={busy}>Create lecture</button>
+          <button type="submit" disabled={busy}>{busy ? 'Creating...' : 'Create lecture'}</button>
           <Link className="button secondary" to="/lecturer">Cancel</Link>
         </div>
       </form>
