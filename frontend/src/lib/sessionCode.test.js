@@ -18,7 +18,7 @@ describe('generateCode', () => {
   });
 
   it('never uses easily confused characters', () => {
-    for (const bad of ['0', 'O', '1', 'I', 'L']) {
+    for (const bad of ['0', 'O', '1', 'I']) {
       expect(CODE_ALPHABET.includes(bad)).toBe(false);
     }
   });
@@ -68,5 +68,11 @@ describe('findFreeCode', () => {
     await expect(
       findFreeCode(async () => true, { maxTries: 3, generate: () => 'AAAAAA' }),
     ).rejects.toThrow(/free session code/i);
+  });
+});
+
+describe('backend compatibility', () => {
+  it('uses the same alphabet as the backend session codes', () => {
+    expect(CODE_ALPHABET).toBe('ABCDEFGHJKLMNPQRSTUVWXYZ23456789');
   });
 });

@@ -1,5 +1,5 @@
-// Characters that are easy to read aloud and type: no 0/O, 1/I/L.
-export const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+// Must match the backend (src/utils/sessionCode.js): no 0, O, 1 or I.
+export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const CODE_LENGTH = 6;
 
 export function generateCode(length = CODE_LENGTH, random = defaultRandom) {

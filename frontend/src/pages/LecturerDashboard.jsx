@@ -57,7 +57,7 @@ export default function LecturerDashboard() {
                   <button type="button" onClick={() => changeStatus(l.id, 'live')}>Start</button>
                 )}
                 {l.status === 'live' && (
-                  <button type="button" className="secondary" onClick={() => changeStatus(l.id, 'completed')}>End</button>
+                  <button type="button" className="secondary" onClick={() => changeStatus(l.id, 'ended')}>End</button>
                 )}
                 <Link className="button secondary" to={`/lecture/${l.id}`}>Open</Link>
               </div>
