@@ -8,8 +8,10 @@ import {
   updateProfile,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db, googleProvider, isFirebaseConfigured } from './firebase';
+import { apiRequest } from './lib/api';
+import { buildProfileRequest } from './lib/profile';
 
 const AuthContext = createContext(null);
 
@@ -51,14 +53,10 @@ export function AuthProvider({ children }) {
   }, [loadProfile]);
 
   async function createProfile(firebaseUser, { name, role, preferredLanguage = 'en' }) {
-    const data = {
-      name: name || firebaseUser.displayName || '',
-      email: firebaseUser.email,
-      role,
-      preferredLanguage,
-      createdAt: serverTimestamp(),
-    };
-    await setDoc(doc(db, 'users', firebaseUser.uid), data);
+    await apiRequest('/api/users/profile', {
+      method: 'POST',
+      body: buildProfileRequest({ name, email: firebaseUser.email, role, preferredLanguage }),
+    });
     return loadProfile(firebaseUser);
   }
 
