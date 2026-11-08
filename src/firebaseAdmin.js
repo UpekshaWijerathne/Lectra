@@ -1,7 +1,9 @@
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 
-const serviceAccount = require("../serviceAccountKey.json");
+const serviceAccount = require(
+  process.env.GOOGLE_APPLICATION_CREDENTIALS || "../serviceAccountKey.json"
+);
 
 // Prevent initializing Firebase more than once
 const app = getApps().length

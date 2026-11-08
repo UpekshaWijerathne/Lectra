@@ -4,7 +4,7 @@ node_modules/
 # Environment variables and credentials
 .env
 .env.*
-!.env.example
+!.env.local
 serviceAccountKey.json
 
 # Firebase logs
@@ -13,3 +13,5 @@ firestore-debug.log
 
 # Firebase local cache
 .firebase/
+
+frontend/dist/
