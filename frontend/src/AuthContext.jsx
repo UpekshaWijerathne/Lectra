@@ -1,114 +1,152 @@
-import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   onAuthStateChanged,
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signInWithPopup,
   signOut,
   updateProfile,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db, googleProvider, isFirebaseConfigured } from './firebase';
+import { apiRequest } from './lib/api';
+import { buildProfileRequest } from './lib/profile';
 
 const AuthContext = createContext(null);
 
-export function useAuth() {
-  return useContext(AuthContext);
+// Reads the role from users/{uid}. Returns null when the profile does not exist yet.
+async function fetchRole(uid) {
+  const snap = await getDoc(doc(db, 'users', uid));
+  return snap.exists() ? snap.data().role || null : null;
+}
+
+// firestore.rules does not allow browsers to create users/{uid} (US-05, US-07),
+// so the backend creates the profile and stores the role.
+function createProfileOnBackend({ name, email, role }) {
+  return apiRequest('/api/users/profile', {
+    method: 'POST',
+    body: buildProfileRequest({ name, email, role }),
+  });
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null); 
+  const [currentUser, setCurrentUser] = useState(null);
+  const [role, setRoleState] = useState(null); // 'student' | 'lecturer' | 'admin' | null
   const [loading, setLoading] = useState(isFirebaseConfigured);
-  const registering = useRef(false);
 
-  const loadProfile = useCallback(async (firebaseUser) => {
-    if (!firebaseUser) {
-      setProfile(null);
-      return null;
-    }
-    const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
-    const data = snap.exists() ? { id: snap.id, ...snap.data() } : null;
-    setProfile(data);
-    return data;
-  }, []);
+  // True while register() is creating the account and its profile. The auth listener then
+  // skips its own profile read so it cannot overwrite the role with null.
+  const registering = useRef(false);
+  // Ignores results from an older auth event that finishes after a newer one.
+  const latestEvent = useRef(0);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return undefined;
+
     return onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (registering.current) {
+      if (registering.current) return;
+      const eventId = ++latestEvent.current;
+
+      if (!firebaseUser) {
+        setCurrentUser(null);
+        setRoleState(null);
         setLoading(false);
         return;
       }
+
+      let userRole = null;
       try {
-        await loadProfile(firebaseUser);
-      } finally {
-        setLoading(false);
+        userRole = await fetchRole(firebaseUser.uid);
+      } catch (err) {
+        console.error('Error reading the user profile from Firestore:', err);
       }
+      if (eventId !== latestEvent.current) return;
+
+      // The user and the role are set together, so a guard never sees "signed in, no role" by mistake.
+      setRoleState(userRole);
+      setCurrentUser(firebaseUser);
+      setLoading(false);
     });
-  }, [loadProfile]);
+  }, []);
 
-  async function createProfile(firebaseUser, { name, role, preferredLanguage = 'en' }) {
-    const data = {
-      name: name || firebaseUser.displayName || '',
-      email: firebaseUser.email,
-      role,
-      preferredLanguage,
-      createdAt: serverTimestamp(),
-    };
-    await setDoc(doc(db, 'users', firebaseUser.uid), data);
-    return loadProfile(firebaseUser);
-  }
+  // Email / password login (US-05)
+  const login = async (email, password) => {
+    const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+    const userRole = await fetchRole(cred.user.uid).catch(() => null);
+    return { user: cred.user, role: userRole };
+  };
 
-  async function register({ name, email, password, role }) {
+  // Email / password registration with a role (US-05, US-07)
+  const register = async ({ email, password, name, role: chosenRole }) => {
+    const wantedRole = chosenRole || 'student';
     registering.current = true;
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      if (name) await updateProfile(cred.user, { displayName: name });
-      await createProfile(cred.user, { name, role });
-      return cred.user;
+      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      try {
+        if (name) await updateProfile(cred.user, { displayName: name });
+        await createProfileOnBackend({ name, email: cred.user.email, role: wantedRole });
+      } catch (profileError) {
+        // The Firebase account exists but has no profile. Sign out so the user can log in
+        // and finish on the role selection screen.
+        await signOut(auth);
+        throw new Error(
+          `Your account was created, but your profile could not be saved (${profileError.message}). Please log in to continue.`,
+        );
+      }
+      setRoleState(wantedRole);
+      setCurrentUser(cred.user);
+      setLoading(false);
+      return { user: cred.user, role: wantedRole };
     } finally {
       registering.current = false;
     }
-  }
+  };
 
-  function login(email, password) {
-    return signInWithEmailAndPassword(auth, email, password);
-  }
+  // Google sign-in (US-05). A new Google user has no profile, so the role stays null
+  // and the app sends them to /choose-role.
+  const loginWithGoogle = async () => {
+    const result = await signInWithPopup(auth, googleProvider);
+    const userRole = await fetchRole(result.user.uid).catch(() => null);
+    return { user: result.user, role: userRole, isNewUser: !userRole };
+  };
 
-  function resetPassword(email) {
-    return sendPasswordResetEmail(auth, email);
-  }
+  // Saves the chosen role through the backend (US-07). The backend refuses to change an existing role.
+  const setRole = async (newRole) => {
+    if (!currentUser) throw new Error('No authenticated user found.');
+    await createProfileOnBackend({
+      name: currentUser.displayName,
+      email: currentUser.email,
+      role: newRole,
+    });
+    setRoleState(newRole);
+  };
 
-  async function loginWithGoogle() {
-    const cred = await signInWithPopup(auth, googleProvider);
-    await loadProfile(cred.user);
-    return cred.user;
-  }
+  const resetPassword = (email) => sendPasswordResetEmail(auth, email.trim());
 
-  async function chooseRole(role) {
-    if (!user) throw new Error('Not signed in');
-    return createProfile(user, { name: user.displayName, role });
-  }
-
-  function logout() {
-    return signOut(auth);
-  }
+  const logout = () => signOut(auth);
 
   const value = {
-    user,
-    profile,
-    role: profile?.role ?? null,
+    currentUser,
+    user: currentUser, // alias used by some pages
+    role,
     loading,
-    register,
     login,
+    register,
     loginWithGoogle,
+    setRole,
     resetPassword,
-    chooseRole,
     logout,
+    isAuthenticated: Boolean(currentUser),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }
