@@ -1,48 +1,395 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap');
+
 :root {
-  --brand: #3b3b98;
-  --bg: #f5f5fb;
-  --text: #1c1c28;
-  --muted: #6b6b80;
-  --danger: #b3261e;
-  font-family: Arial, Helvetica, sans-serif;
+  /* Exact Figma Lectra Color Tokens */
+  --brand: #17324D;          /* Deep Academic Navy (Primary) */
+  --brand-secondary: #24688E;/* Secondary Ocean Slate */
+  --accent: #19A7A1;         /* Vibrant Mint / Teal */
+  --accent-soft: #E8F7F6;    /* Subtle Mint / Teal Tint */
+  --bg: #F4F7FA;             /* Crisp Academic Background */
+  --surface: #FFFFFF;        /* Pure White Card Surface */
+  --text: #243447;           /* High-contrast readable body text */
+  --muted: #64748B;          /* Slate secondary / helper text */
+  --border: #DCE4EC;         /* Clean modern border */
+  --danger: #E11D48;         /* Semantic Crimson error */
+  --success: #059669;        /* Emerald active / answered */
+
+  /* Modern Geometry & Elevation Tokens */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-card: 0 20px 40px -15px rgba(23, 50, 77, 0.08), 0 0 1px 1px rgba(23, 50, 77, 0.04);
+  --shadow-hover: 0 25px 50px -12px rgba(23, 50, 77, 0.14);
+  --shadow-button: 0 4px 14px 0 rgba(23, 50, 77, 0.22);
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); }
-h1 { font-size: 1.4rem; color: var(--brand); margin: 0 0 12px; }
-.card { background: #fff; max-width: 760px; margin: 32px auto; padding: 24px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
-.card.narrow { max-width: 440px; }
-form { display: flex; flex-direction: column; gap: 12px; margin: 12px 0; }
-label { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
-input, select, textarea { padding: 10px; border: 1px solid #c9c9d6; border-radius: 6px; font: inherit; }
-button, .button { background: var(--brand); color: #fff; border: 0; border-radius: 6px; padding: 10px 16px; font: inherit; cursor: pointer; text-decoration: none; display: inline-block; text-align: center; }
-button.secondary, .button.secondary { background: #e8e8f8; color: var(--brand); }
-button:disabled { opacity: .6; cursor: default; }
-.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.between { justify-content: space-between; }
-.muted { color: var(--muted); font-size: .9rem; }
-.center { text-align: center; margin-top: 48px; }
-.error { color: var(--danger); margin: 0; }
-.list { list-style: none; padding: 0; margin: 16px 0 0; }
-.item { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid #ececf4; flex-wrap: wrap; }
-.code { font-family: "Courier New", monospace; font-weight: bold; letter-spacing: 2px; background: #e8e8f8; padding: 6px 10px; border-radius: 6px; }
-.code.big { font-size: 2rem; text-align: center; letter-spacing: 6px; padding: 16px; }
-.code-input { font-family: "Courier New", monospace; font-size: 1.6rem; text-align: center; letter-spacing: 6px; text-transform: uppercase; }
 
-.role-cards { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.role-cards legend { padding: 0; margin-bottom: 6px; font-size: .9rem; }
-.role-card { position: relative; border: 2px solid #c9c9d6; border-radius: 8px; padding: 12px; cursor: pointer; }
-.role-card input { position: absolute; opacity: 0; pointer-events: none; }
-.role-card.selected { border-color: var(--brand); background: #f0f0fb; }
-.role-card:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
-.role-card strong { color: var(--brand); }
-@media (max-width: 480px) { .role-cards { grid-template-columns: 1fr; } }
+* {
+  box-sizing: border-box;
+}
 
-textarea { resize: vertical; }
-h2 { font-size: 1.1rem; color: var(--brand); margin: 20px 0 4px; }
-.check { flex-direction: row; align-items: center; gap: 8px; }
-.check input { width: auto; padding: 0; }
-.hint { color: var(--muted); font-size: .8rem; margin: 0; }
-.hint.left { text-align: left; }
-.success { color: #1b6e3c; margin: 0; }
-.question { padding: 12px 0; border-top: 1px solid #ececf4; }
-.question p { margin: 0 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  /* Ambient glowing teal/navy radial blurs from Figma */
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(25, 167, 161, 0.07) 0px, transparent 45%),
+    radial-gradient(at 100% 100%, rgba(36, 104, 142, 0.07) 0px, transparent 45%);
+  background-attachment: fixed;
+}
+
+/* Headings */
+h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--brand);
+  letter-spacing: -0.025em;
+  margin: 0 0 16px;
+}
+
+h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--brand);
+  letter-spacing: -0.015em;
+  margin: 24px 0 8px;
+}
+
+/* Card Containers */
+.card {
+  background: var(--surface);
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card.narrow {
+  max-width: 440px;
+  padding: 32px 28px;
+}
+
+/* Forms & Layout */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Inputs, Selects, Textareas */
+input, select, textarea {
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(25, 167, 161, 0.15);
+}
+
+input::placeholder, textarea::placeholder {
+  color: #94A3B8;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Primary & Secondary Buttons */
+button, .button {
+  background: var(--brand);
+  color: #ffffff;
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: 12px 20px;
+  font: inherit;
+  font-size: 0.925rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  box-shadow: var(--shadow-button);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:hover, .button:hover {
+  background: #1f4368;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px 0 rgba(23, 50, 77, 0.3);
+}
+
+button:active, .button:active {
+  transform: translateY(0);
+}
+
+button.secondary, .button.secondary {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1.5px solid rgba(25, 167, 161, 0.3);
+  box-shadow: none;
+}
+
+button.secondary:hover, .button.secondary:hover {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px 0 rgba(25, 167, 161, 0.35);
+}
+
+button:disabled, .button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Flex Rows & Alignment */
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.between {
+  justify-content: space-between;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.center {
+  text-align: center;
+  margin-top: 48px;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.success {
+  color: var(--success);
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.hint.left {
+  text-align: left;
+}
+
+.check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.check input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+/* Lists and Items */
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+/* PIN Codes and Input Fields */
+.code {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-weight: 700;
+  letter-spacing: 2px;
+  background: var(--accent-soft);
+  color: var(--brand);
+  border: 1px solid rgba(25, 167, 161, 0.25);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+}
+
+.code.big {
+  font-size: 2.2rem;
+  text-align: center;
+  letter-spacing: 8px;
+  padding: 20px;
+  background: #ffffff;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-md);
+  color: var(--brand);
+  box-shadow: 0 4px 16px rgba(25, 167, 161, 0.1);
+}
+
+.code-input {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  border: 2px solid var(--border);
+  padding: 14px;
+}
+
+.code-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(25, 167, 161, 0.15);
+}
+
+/* Role Selector Radio Cards */
+.role-cards {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.role-cards legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.role-card {
+  position: relative;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 16px;
+  cursor: pointer;
+  background: #ffffff;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(23, 50, 77, 0.04);
+}
+
+.role-card:hover {
+  border-color: var(--brand-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(23, 50, 77, 0.08);
+}
+
+.role-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.role-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 2px rgba(25, 167, 161, 0.25);
+}
+
+.role-card:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.role-card strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--brand);
+  margin-bottom: 4px;
+}
+
+/* Student Q&A Stream Item */
+.question {
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+
+.question p {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+/* Responsive Mobile Breakpoints */
+@media (max-width: 640px) {
+  .card {
+    margin: 16px;
+    padding: 24px 20px;
+    border-radius: var(--radius-md);
+  }
+
+  .role-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .code.big {
+    font-size: 1.6rem;
+    letter-spacing: 4px;
+    padding: 16px;
+  }
+
+  .code-input {
+    font-size: 1.4rem;
+    letter-spacing: 5px;
+  }
+}
