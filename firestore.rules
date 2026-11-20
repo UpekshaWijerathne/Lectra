@@ -1,0 +1,291 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // HELPER FUNCTIONS
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userExists() {
+      return signedIn() &&
+        exists(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        );
+    }
+
+    function role() {
+      return get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      ).data.role;
+    }
+
+    function isLecturer() {
+      return userExists() && role() == 'lecturer';
+    }
+
+    function isAdmin() {
+      return userExists() && role() == 'admin';
+    }
+
+    function lectureExists(lectureId) {
+      return exists(
+        /databases/$(database)/documents/lectures/$(lectureId)
+      );
+    }
+
+    function ownsLecture(lectureId) {
+      return signedIn()
+        && lectureExists(lectureId)
+        && get(
+          /databases/$(database)/documents/lectures/$(lectureId)
+        ).data.lecturerId == request.auth.uid;
+    }
+
+    function isParticipant(lectureId) {
+      return signedIn()
+        && exists(
+          /databases/$(database)/documents/lectures/$(lectureId)/participants/$(request.auth.uid)
+        );
+    }
+
+
+    // USERS COLLECTION
+
+    match /users/{uid} {
+
+      allow get: if signedIn()
+        && (request.auth.uid == uid || isAdmin());
+
+      allow list: if isAdmin();
+
+      // Account creation and role assignment
+      // are handled by the backend.
+      allow create, delete: if false;
+
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['displayName', 'preferredLanguage'])
+        && request.resource.data.displayName is string;
+    }
+
+
+    // LECTURES COLLECTION
+
+    match /lectures/{lectureId} {
+
+      allow get: if signedIn();
+
+      allow list: if signedIn()
+        && (
+          resource.data.lecturerId == request.auth.uid
+          || isAdmin()
+        );
+
+      // Only lecturers can create their own lectures.
+      allow create: if isLecturer()
+        && request.resource.data.lecturerId == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          'lecturerId',
+          'subject',
+          'topic',
+          'scheduledAt',
+          'sessionCode',
+          'status',
+          'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'lecturerId',
+          'subject',
+          'topic',
+          'scheduledAt',
+          'sessionCode',
+          'status',
+          'createdAt'
+        ])
+        && request.resource.data.subject is string
+        && request.resource.data.topic is string
+        && request.resource.data.scheduledAt is timestamp
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.sessionCode is string
+        && request.resource.data.status == 'scheduled';
+
+      // Lecturers can update their own lectures.
+      allow update: if signedIn()
+        && (
+          resource.data.lecturerId == request.auth.uid
+          || isAdmin()
+        )
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'subject',
+            'topic',
+            'scheduledAt',
+            'status'
+          ])
+        && request.resource.data.subject is string
+        && request.resource.data.topic is string
+        && request.resource.data.scheduledAt is timestamp
+        && request.resource.data.status in [
+          'scheduled',
+          'live',
+          'ended'
+        ];
+
+      allow delete: if isAdmin();
+
+
+      // LECTURE PARTICIPANTS SUBCOLLECTION
+
+      match /participants/{uid} {
+
+        allow get: if signedIn()
+          && (
+            request.auth.uid == uid
+            || ownsLecture(lectureId)
+            || isAdmin()
+          );
+
+        allow list: if ownsLecture(lectureId)
+          || isAdmin();
+
+        // Joining is handled by the backend
+        // after session-code validation.
+        allow create, update, delete: if false;
+      }
+    }
+
+
+    // SESSION CODES COLLECTION
+
+    match /sessionCodes/{code} {
+
+      // Session-code lookup and creation
+      // are handled by the backend.
+      allow read, write: if false;
+    }
+
+
+    // QUESTIONS COLLECTION
+
+    match /questions/{questionId} {
+
+      // Authorized lecture participants,
+      // lecturers and admins can read questions.
+      allow get, list: if signedIn()
+        && lectureExists(resource.data.lectureId)
+        && (
+          ownsLecture(resource.data.lectureId)
+          || isParticipant(resource.data.lectureId)
+          || isAdmin()
+        );
+
+      // Question creation requires a matching
+      // private author document in the same batch.
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll([
+          'lectureId',
+          'text',
+          'isAnonymous',
+          'voteCount',
+          'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'lectureId',
+          'text',
+          'isAnonymous',
+          'voteCount',
+          'createdAt'
+        ])
+        && request.resource.data.lectureId is string
+        && isParticipant(request.resource.data.lectureId)
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.isAnonymous is bool
+        && request.resource.data.voteCount == 0
+        && request.resource.data.createdAt == request.time
+        && existsAfter(
+          /databases/$(database)/documents/questionAuthors/$(questionId)
+        )
+        && getAfter(
+          /databases/$(database)/documents/questionAuthors/$(questionId)
+        ).data.authorId == request.auth.uid
+        && getAfter(
+          /databases/$(database)/documents/questionAuthors/$(questionId)
+        ).data.lectureId == request.resource.data.lectureId;
+
+      // Voting and moderation require trusted
+      // backend validation.
+      allow update, delete: if false;
+    }
+
+
+    // PRIVATE QUESTION AUTHORS COLLECTION
+
+    match /questionAuthors/{questionId} {
+
+      // Only the question author, the lecturer
+      // responsible for the lecture, or an admin
+      // can retrieve the private author information.
+      allow get: if signedIn()
+        && (
+          resource.data.authorId == request.auth.uid
+          || ownsLecture(resource.data.lectureId)
+          || isAdmin()
+        );
+
+      // Prevent listing private author records.
+      allow list: if false;
+
+      // Author information must be created together
+      // with its corresponding question.
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll([
+          'lectureId',
+          'authorId'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'lectureId',
+          'authorId'
+        ])
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.lectureId is string
+        && isParticipant(request.resource.data.lectureId)
+        && existsAfter(
+          /databases/$(database)/documents/questions/$(questionId)
+        )
+        && getAfter(
+          /databases/$(database)/documents/questions/$(questionId)
+        ).data.lectureId == request.resource.data.lectureId;
+
+      // Only trusted backend operations can
+      // update or delete author information.
+      allow update, delete: if false;
+    }
+
+
+    // AI SUMMARIES COLLECTION
+
+    match /summaries/{summaryId} {
+
+      // Only the lecturer who owns the lecture
+      // and admins can access AI summaries.
+      allow get, list: if signedIn()
+        && (
+          ownsLecture(resource.data.lectureId)
+          || isAdmin()
+        );
+
+      // AI summaries are created and managed
+      // by trusted backend/AI services.
+      allow create, update, delete: if false;
+    }
+
+  }
+}
