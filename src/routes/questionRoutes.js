@@ -135,7 +135,7 @@ router.get("/lectures/:lectureId/stream", verifyToken, async (req, res) => {
       }
     );
 
-    req.on("close", () => {
+    res.on("close", () => {
       if (unsubscribe) unsubscribe();
     });
   } catch (error) {
