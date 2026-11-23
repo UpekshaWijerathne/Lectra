@@ -9,11 +9,13 @@ const verifyToken = require("./middleware/authMiddleware");
 const allowRoles = require("./middleware/roleMiddleware");
 const lectureRoutes = require("./routes/lectureRoutes");
 const userRoutes = require("./routes/userRoutes");
+const questionRoutes = require("./routes/questionRoutes");
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use("/api/lectures", lectureRoutes);
+app.use("/api/questions", questionRoutes);
 
 // Home route
 app.get("/", (req, res) => {
